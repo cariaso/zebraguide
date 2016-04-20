@@ -247,13 +247,13 @@ matrix = {
 
 ref_gap_open = -100
 ref_gap_extend = -50
-query_gap_open = -10
+query_gap_open = -1
 query_gap_extend = -0.05
  
 refseq = fastafn2seq(refinfn)
 
 
-step = 50000
+step = 5000
 
 print len(refseq)
 smallseq = seq.upper()
@@ -261,7 +261,7 @@ steps = range(0, len(refseq),step)
 
 
 for start in steps:
-    bigseq = refseq[::-1].upper()[start:start+step]
+    bigseq = refseq.upper()[start:start+step]
     print start,'@',len(bigseq), 'x', len(smallseq)
     #alns = pairwise2.align.globalds(bigseq, smallseq, matrix, gap_open, gap_extend)
     alns = pairwise2.align.localdd(bigseq, smallseq, matrix, ref_gap_open, ref_gap_extend, query_gap_open, query_gap_extend)
@@ -281,10 +281,11 @@ for start in steps:
                 compare = ' '
             align_chars.append(compare)
             #print '%s%s%s' % (t, compare, b)
-        #print aln_top
+        print aln_top
         print ''.join(align_chars)
-        #print aln_bot
+        print aln_bot
         print 'score=',score, 'begin=',begin, 'end=',end
+        print '\n'*4
 
 
 
