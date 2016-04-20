@@ -45,7 +45,7 @@ def fastafn2seq(fn):
     return seq
 
 seq = fastafn2seq(iupacfn)
-print seq
+#print seq
 
 
 known = {
@@ -245,25 +245,46 @@ matrix = {
 }
 
 
-gap_open = -10
-gap_extend = -0.5
+ref_gap_open = -100
+ref_gap_extend = -50
+query_gap_open = -10
+query_gap_extend = -0.05
  
 refseq = fastafn2seq(refinfn)
 
- 
-bigseq = refseq.upper()#[:10000]
-smallseq = seq.upper()
+
+step = 50000
+
 print len(refseq)
-print len(bigseq), 'x', len(smallseq)
-#alns = pairwise2.align.globalds(bigseq, smallseq, matrix, gap_open, gap_extend)
-alns = pairwise2.align.localds(bigseq, smallseq, matrix, gap_open, gap_extend)
- 
-top_aln = alns[0]
-aln_top, aln_bot, score, begin, end = top_aln
- 
-print aln_top
-print aln_bot
-print 'score=',score, 'begin=',begin, 'end=',end
+smallseq = seq.upper()
+steps = range(0, len(refseq),step)
+
+
+for start in steps:
+    bigseq = refseq[::-1].upper()[start:start+step]
+    print start,'@',len(bigseq), 'x', len(smallseq)
+    #alns = pairwise2.align.globalds(bigseq, smallseq, matrix, gap_open, gap_extend)
+    alns = pairwise2.align.localdd(bigseq, smallseq, matrix, ref_gap_open, ref_gap_extend, query_gap_open, query_gap_extend)
+
+
+    from Bio.pairwise2 import format_alignment
+    for a in alns[:1]:
+        #print(format_alignment(*a))
+
+        aln_top, aln_bot, score, begin, end = a
+        align_chars = []
+        for t,b in zip(aln_top, aln_bot):
+            score = matrix.get((t,b), 0)
+            if score > 1:
+                compare = '='
+            else:
+                compare = ' '
+            align_chars.append(compare)
+            #print '%s%s%s' % (t, compare, b)
+        #print aln_top
+        print ''.join(align_chars)
+        #print aln_bot
+        print 'score=',score, 'begin=',begin, 'end=',end
 
 
 
