@@ -253,7 +253,7 @@ query_gap_extend = -0.05
 refseq = fastafn2seq(refinfn)
 
 
-step = 5000
+step = 50000
 
 print len(refseq)
 smallseq = seq.upper()
@@ -271,27 +271,70 @@ for start in steps:
     for a in alns[:1]:
         #print(format_alignment(*a))
 
-        aln_top, aln_bot, score, begin, end = a
+        aln_top, aln_bot, aln_score, begin, end = a
         align_chars = []
+        alt_chars = []
         for t,b in zip(aln_top, aln_bot):
             score = matrix.get((t,b), 0)
             if score > 1:
                 compare = '='
+                couldbe = known[b].upper()
+                if t == couldbe[1]:
+                    alts = couldbe[0]
+                    alt_iupac = couldbe[0]
+                else:
+                    alts = couldbe
+                    alt_iupac = b
+                alt_chars.append(alt_iupac)
+                #print '%s%s%s:%s:%s:%s' % (t, compare, b, couldbe, alts, alt_iupac)
             else:
                 compare = ' '
+                #print '%s%s%s' % (t, compare, b)
+
             align_chars.append(compare)
-            #print '%s%s%s' % (t, compare, b)
         print aln_top
         print ''.join(align_chars)
         print aln_bot
-        print 'score=',score, 'begin=',begin, 'end=',end
+        print 'score=',aln_score, 'begin=',begin, 'end=',end
         print '\n'*4
 
+        altseq = ''.join(alt_chars)
+        alt_alns = pairwise2.align.localdd(bigseq, altseq, matrix, ref_gap_open, ref_gap_extend, query_gap_open, query_gap_extend)
+
+
+        for a2 in alt_alns[:1]:
+
+            alt_aln_top, alt_aln_bot, alt_score, alt_begin, alt_end = a2
+            alt_align_chars = []
+            for alt_t,alt_b in zip(alt_aln_top, alt_aln_bot):
+                alt_score = matrix.get((alt_t,alt_b), 0)
+                if alt_score > 1:
+                    alt_compare = '='
+                else:
+                    alt_compare = ' '
+                #print '%s%s%s' % (alt_t, alt_compare, alt_b)
+
+                alt_align_chars.append(alt_compare)
+            #print alt_aln_top
+            print ''.join(alt_align_chars)
+            print alt_aln_bot
+            print 'score=',alt_score, 'begin=',alt_begin, 'end=',alt_end
+            print '\n'*4
+
+        print altseq
 
 
 
 
-
+for i, rest in enumerate(zip(smallseq, altseq)):
+    a1, a2 = rest
+    print i, aln_top[i], align_chars[i], known[a1], a1,a2,
+    if a1 in 'ATCG':
+        print '*'
+    elif a1 != a2:
+        print '#'
+    else:
+        print ' '
 
 
 
