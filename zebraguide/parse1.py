@@ -3,6 +3,17 @@
 from abifpy import Trace
 import sys
 import pdb
+from termcolor import colored
+
+
+def fastafn2seq(fn):
+    infh = file(fn)
+    topline = infh.readline()
+    body = infh.read()
+    seq = body.replace('\n','')
+    return seq
+
+
 ab1infn = sys.argv[1]
 refinfn = sys.argv[2]
 if False:
@@ -26,6 +37,7 @@ if False:
         print '%d\t%d\t%s' % (i, val, viz)
 
 
+
 import tempfile
 
 tmpdir = tempfile.mkdtemp()
@@ -36,13 +48,6 @@ tempab1 = '%s/%s' % (tmpdir, baseab1)
 shutil.copyfile(ab1infn, tempab1)
 iupacfn = 'abc'
 os.system('~/phred/phred -id %s -m %s' % (tmpdir, iupacfn))
-
-def fastafn2seq(fn):
-    infh = file(fn)
-    topline = infh.readline()
-    body = infh.read()
-    seq = body.replace('\n','')
-    return seq
 
 seq = fastafn2seq(iupacfn)
 #print seq
@@ -94,9 +99,16 @@ from Bio.SubsMat import MatrixInfo as matlist
 
 import pdb
 #pdb.set_trace()
+
 SC_perfect = 10
-SC_1of2 = 10
+SC_1of2 = 8
 SC_miss = -5
+
+ref_gap_open = -10
+ref_gap_extend = -5
+query_gap_open = -10
+query_gap_extend = -5
+
 
 matrix = {
 
@@ -245,11 +257,6 @@ matrix = {
 }
 
 
-ref_gap_open = -100
-ref_gap_extend = -50
-query_gap_open = -1
-query_gap_extend = -0.05
- 
 refseq = fastafn2seq(refinfn)
 
 
@@ -263,6 +270,10 @@ steps = range(0, len(refseq),step)
 for start in steps:
     bigseq = refseq.upper()[start:start+step]
     print start,'@',len(bigseq), 'x', len(smallseq)
+
+    print
+    print 'searching for'
+    print smallseq
     #alns = pairwise2.align.globalds(bigseq, smallseq, matrix, gap_open, gap_extend)
     alns = pairwise2.align.localdd(bigseq, smallseq, matrix, ref_gap_open, ref_gap_extend, query_gap_open, query_gap_extend)
 
@@ -286,19 +297,38 @@ for start in steps:
                     alts = couldbe
                     alt_iupac = b
                 alt_chars.append(alt_iupac)
-                #print '%s%s%s:%s:%s:%s' % (t, compare, b, couldbe, alts, alt_iupac)
+                #print 'ref=%s%s\tbest=%s:%s\talts=%s\talt_iupac=%s' % (t, compare, b, couldbe, alts, alt_iupac)
             else:
                 compare = ' '
-                #print '%s%s%s' % (t, compare, b)
+                #print 'ref=%s%s\tbest=%s' % (t, compare, b)
 
             align_chars.append(compare)
+
+        print
+        print 'colored alignment'
+        for i, c in enumerate(aln_top):
+            perfect = ''.join(align_chars[i-2:i+3]) == '====='
+            good = align_chars[i] == '='
+            if perfect:
+                sys.stdout.write(colored(c, 'red',attrs=['bold']))
+            elif good:
+                sys.stdout.write(colored(c, 'grey',attrs=['bold']))
+            else:
+                sys.stdout.write(colored(c, 'white'))
+        print
+        print
+        print 'reference/hits/query'
         print aln_top
         print ''.join(align_chars)
         print aln_bot
         print 'score=',aln_score, 'begin=',begin, 'end=',end
         print '\n'*4
 
+
         altseq = ''.join(alt_chars)
+        print 'altseq'
+        print altseq
+
         alt_alns = pairwise2.align.localdd(bigseq, altseq, matrix, ref_gap_open, ref_gap_extend, query_gap_open, query_gap_extend)
 
 
@@ -307,8 +337,8 @@ for start in steps:
             alt_aln_top, alt_aln_bot, alt_score, alt_begin, alt_end = a2
             alt_align_chars = []
             for alt_t,alt_b in zip(alt_aln_top, alt_aln_bot):
-                alt_score = matrix.get((alt_t,alt_b), 0)
-                if alt_score > 1:
+                alt_base_score = matrix.get((alt_t,alt_b), 0)
+                if alt_base_score > 1:
                     alt_compare = '='
                 else:
                     alt_compare = ' '
@@ -325,10 +355,12 @@ for start in steps:
 
 
 
-
+sys.exit()
 for i, rest in enumerate(zip(smallseq, altseq)):
-    a1, a2 = rest
-    print i, aln_top[i], align_chars[i], known[a1], a1,a2,
+    a1 = smallseq[i]
+    a2 = altseq[i]
+    #a1, a2 = rest
+    print i, aln_top[i], align_chars[i], aln_bot[i], a1, known[a1], a2, known[a2], ';', alt_align_chars[i], alt_aln_bot[i],
     if a1 in 'ATCG':
         print '*'
     elif a1 != a2:
